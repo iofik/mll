@@ -1,3 +1,7 @@
+#include <ctime>
+#include <cstdio>
+#include <algorithm>
+#include <iterator>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -8,6 +12,7 @@
 #include "classifier.h"
 #include "cross_validation.h"
 #include "dataset.h"
+#include "dataset_wrapper.h"
 #include "factories.h"
 #include "tester.h"
 #include "logger.h"
@@ -48,231 +53,213 @@ void ListTesters() {
     cout << endl;
 }
 
-sh_ptr<IDataSet> LoadDataSet(const string& dataFileName) {
-    DataSet *dataSet = new DataSet();
-    if (!dataSet->Load(dataFileName)) {
-        throw std::logic_error("Could not load dataset");
-    }
-    cout << "Dataset '" << dataSet->GetName() << "' loaded: "
-         << dataSet->GetFeatureCount() << " features, "
-         << dataSet->GetObjectCount() << " objects, "
-         << dataSet->GetClassCount() << " classes." << endl;
-    cout << endl;
-    return sh_ptr<IDataSet>(dataSet);
-}
-
 sh_ptr<IClassifier> CreateClassifier(const string& classifierName) {
     sh_ptr<IClassifier> classifier = ClassifierFactory::Instance().Create(classifierName);
     if (classifier.get() == NULL) {
-        throw std::logic_error("No classifier with this name registered");
+		LOGF("Classifier '%s' is not registered", LOGSTR(classifierName));
     }
-    cout << "Classifier: " << classifierName << endl;
-    cout << "Parameters:" << endl;
-    classifier->PrintParameters(true, true);
-    cout << endl;
+	LOGD("Classifier '%s' is loaded", LOGSTR(classifierName));
     return classifier;
 }
 
 sh_ptr<ITester> CreateTester(const string& testerName) {
     sh_ptr<ITester> tester = TesterFactory::Instance().Create(testerName);
     if (tester.get() == NULL) {
-        throw std::logic_error("No tester with this name registered");
+        LOGF("Tester '%s' is not registered", LOGSTR(testerName));
     }
-    cout << "Tester: " << testerName << endl;
-    cout << "Parameters:" << endl;
-    tester->PrintParameters(true, true);
-    cout << endl;
+	LOGD("Tester '%s' is loaded", LOGSTR(testerName));
     return tester;
 }
 
-vector<int> readIndexes(const string& filename) {
-	ifstream fin(filename.c_str());
-	if (!fin.is_open()) {
-		throw std::invalid_argument("File doesn't exists!");
+sh_ptr<DataSet> LoadDataSet(const string& fileName) {
+    sh_ptr<DataSet> dataSet(new DataSet());
+    if (!dataSet->Load(fileName)) {
+		LOGF("Can't load dataset %s", LOGSTR(fileName));
+    }
+    LOGI("DataSet '%s' is loaded:", LOGSTR(dataSet->GetName()));
+    LOGI("Features: %d", dataSet->GetFeatureCount());
+    LOGI("Objects : %d", dataSet->GetObjectCount());
+    LOGI("Classes : %d", dataSet->GetClassCount());
+    return dataSet;
+}
+
+template<typename T>
+void LoadVector(const string& fileName, typename std::vector<T> *data) {
+	std::ifstream input(fileName.c_str());
+	if (!input.is_open()) {
+		LOGF("Can't open input file: '%s'", LOGSTR(fileName));
 	}
-	vector<int> res;
-	int index;
-	while (fin >> index) {
-		res.push_back(index);
+	data->clear();
+	typename std::istream_iterator<T> it(input), end;
+	std::copy(it, end, std::back_inserter(*data));
+	LOGD("%d entries loaded from '%s'", data->size(), LOGSTR(fileName));
+}
+
+template<typename T>
+void WriteVector(const std::string& fileName, const typename std::vector<T> &data) {
+	std::ofstream output(fileName.c_str());
+	if (!output.is_open()) {
+		LOGF("Can't open output file: '%s'", LOGSTR(fileName));
 	}
-	fin.close();
-	return res;
+	for (typename std::vector<T>::const_iterator it = data.begin()
+		; it != data.end(); ++it) {
+		output << *it << std::endl;
+	}
+	LOGD("%d entries written to '%s'", data.size(), LOGSTR(fileName));
 }
 
-sh_ptr<IDataSet> GetData(const string& filename) {
-	return LoadDataSet(filename);
-}
-
-sh_ptr<IDataSet> GetData(const IDataSet&, const vector<int>&) {
-	// Empty function
-	return sh_ptr<IDataSet>(new DataSet());
-}
-
-void OutputTargets(const string& filename, const IDataSet&) {
-}
-
-void OutputConfidences(const string& filename, const IDataSet&) {
-}
-
-void OutputWeights(const string& filename, const IDataSet&) {
-}
-
-void LoadPenalties(IDataSet* dataSet, const string& filename) {
-}
-
-const FILE* logger = LOGHANDLER(stderr);
+const FILE* logger = LOGHDR(stderr);
 
 int main(int argc, char** argv) {
+	{	// Logger initialization...
+		char path[80] = {0};
+		time_t rawtime = time(NULL);
+		struct tm timeinfo = *localtime(&rawtime);
+		strftime(path, sizeof(path), "mll_%y%m%d_%H%M%S.log", &timeinfo);
+		LOGHDR(fopen(path, "a"));
+	}
     try {
 		typedef TCLAP::ValueArg<string> StringArg;
+		typedef TCLAP::UnlabeledValueArg<string> UnlabeledStringArg;
+
         TCLAP::CmdLine cmd("Command description message", ' ', "0.1");
 
-		TCLAP::UnlabeledValueArg<string> commandTypeArg(
-			"command", "Type of command", true, "", "string", cmd);
+		UnlabeledStringArg commandTypeArg(
+			"command", "Type of command", false, "", "string", cmd);
+
 		StringArg classifierArg(
 			"c", "classifier", "Name of classifier", false, "", "string", cmd);
 		StringArg fullDataArg(
 			"", "data", "File with full data", false, "", "string", cmd);
-		StringArg testDataArg(
-			"", "trainData", "File with train data", false, "", "string", cmd);
-		StringArg trainDataArg(
-			"", "testData", "File with test data", false, "", "string", cmd);
+		//StringArg testDataArg(
+		//	"", "trainData", "File with train data", false, "", "string", cmd);
+		//StringArg trainDataArg(
+		//	"", "testData", "File with test data", false, "", "string", cmd);
 		StringArg testIndexesArg(
 			"", "testIndexes", "File with test indexes", false, "", "string", cmd);
 		StringArg trainIndexesArg(
 			"", "trainIndexes", "File with train indexes", false, "", "string", cmd);
-		StringArg penaltiesArg(
-			"", "penalties", "File with penalties", false, "", "string", cmd);
+		//StringArg penaltiesArg(
+		//	"", "penalties", "File with penalties", false, "", "string", cmd);
 		
 		StringArg testTargetOutputArg(
 			"", "testTargetOutput", "File to write target of test set", 
 			false, "", "string", cmd);
-		StringArg testConfidencesOutputArg(
-			"", "testConfidencesOutput", "File to write confidences of test set", 
-			false, "", "string", cmd);
-		StringArg testObjectsWeightsOutputArg(
-			"", "testFeatureWeightsOutput", "File to write objects weights of test set", 
-			false, "", "string", cmd);
+		//StringArg testConfidencesOutputArg(
+		//	"", "testConfidencesOutput", "File to write confidences of test set", 
+		//	false, "", "string", cmd);
+		//StringArg testObjectsWeightsOutputArg(
+		//	"", "testFeatureWeightsOutput", "File to write objects weights of test set", 
+		//	false, "", "string", cmd);
 
 		StringArg trainTargetOutputArg(
 			"", "trainTargetOutput", "File to write target of test set", 
 			false, "", "string", cmd);
-		StringArg trainConfidencesOutputArg(
-			"", "trainConfidencesOutput", "File to write confidences of test set", 
-			false, "", "string", cmd);
-		StringArg trainObjectsWeightsOutputArg(
-			"", "trainFeatureWeightsOutput", "File to write objects weights of test set", 
-			false, "", "string", cmd);
+		//StringArg trainConfidencesOutputArg(
+		//	"", "trainConfidencesOutput", "File to write confidences of test set", 
+		//	false, "", "string", cmd);
+		//StringArg trainObjectsWeightsOutputArg(
+		//	"", "trainFeatureWeightsOutput", "File to write objects weights of test set", 
+		//	false, "", "string", cmd);
 
-		StringArg featureWeightsOutputArg(
-			"", "featureWeightsOutput", "File to write feature weights", 
-			false, "", "string", cmd);
+		//StringArg featureWeightsOutputArg(
+		//	"", "featureWeightsOutput", "File to write feature weights", 
+		//	false, "", "string", cmd);
 
+		// Parsing command line...
 		cmd.parse(argc, argv);
 
-		if (!classifierArg.isSet()) {
-			throw TCLAP::ArgException("Classifier requeriment!");
+		{	// Logging command line args...
+			std::list<TCLAP::Arg*>& argList = cmd.getArgList();
+			for (std::list<TCLAP::Arg*>::iterator it = argList.begin()
+				; it != argList.end(); ++it) {
+				if (!(*it)->isSet()) continue;
+				StringArg* strArg = dynamic_cast<StringArg*>(*it);
+				if (strArg) { 
+					LOGD("%s: %s", LOGSTR((*it)->getName()), LOGSTR(strArg->getValue()));
+					continue;
+				}
+				UnlabeledStringArg* ulArg = dynamic_cast<UnlabeledStringArg*>(*it);
+				if (ulArg) {
+					LOGD("%s: %s", LOGSTR((*it)->getName()), LOGSTR(ulArg->getValue()));
+					continue;
+				}
+			}
 		}
 
-		if (!testTargetOutputArg.isSet()) {
-			throw TCLAP::ArgException("File to test targets requeriment!");
-		}
-		
-		sh_ptr<IDataSet> trainData;
-		sh_ptr<IDataSet> testData;
-		if (fullDataArg.isSet()) {
-			if (testDataArg.isSet() || trainDataArg.isSet() || 
-				!testIndexesArg.isSet() || !trainIndexesArg.isSet()) {
-				throw TCLAP::ArgException("Error!");
+		if (commandTypeArg.getValue() == "classify") {
+
+			LOGI("Classification mode...");
+
+			sh_ptr<DataSet> dataSet = LoadDataSet(fullDataArg.getValue());
+			sh_ptr<IClassifier> classifier = CreateClassifier(classifierArg.getValue());
+
+			DataSetWrapper testSet(dataSet.get());
+			DataSetWrapper trainSet(dataSet.get());
+
+			{
+				std::vector<int> indexes;
+				indexes.reserve(dataSet->GetObjectCount());
+				// Loading train indexes...
+				LoadVector(trainIndexesArg.getValue(), &indexes);
+				trainSet.SetObjectIndexes(indexes.begin(), indexes.end());
+				// Loading test indexes...
+                LoadVector(testIndexesArg.getValue(), &indexes);
+                testSet.SetObjectIndexes(indexes.begin(), indexes.end());
 			}
-			sh_ptr<IDataSet> fullData = GetData(fullDataArg.getValue());
-			trainData = GetData(*(fullData.get()), readIndexes(trainIndexesArg.getValue()));
-			testData = GetData(*(fullData.get()), readIndexes(testIndexesArg.getValue()));
+
+			LOGI("Learning...");
+			classifier->Learn(&trainSet);
+
+			{
+				std::vector<int> targets;
+				targets.reserve(dataSet->GetObjectCount());
+				{
+					LOGI("Classifing train data set...");
+					DataSetWrapper trainSetWrapper(&trainSet);
+					for (int i = 0; i < trainSetWrapper.GetObjectCount(); ++i) {
+						trainSetWrapper.SetTarget(i, Refuse);
+					}
+					classifier->Classify(&trainSetWrapper);				
+					trainSetWrapper.ResetObjectIndexes();
+					targets.resize(trainSetWrapper.GetObjectCount());
+					for (int i = 0; i < trainSetWrapper.GetObjectCount(); ++i) {
+						targets[i] = trainSetWrapper.GetTarget(i);
+					}
+					WriteVector(trainTargetOutputArg.getValue(), targets);
+				}
+				{
+					LOGI("Classifing test data set...");
+					DataSetWrapper testSetWrapper(&testSet);
+                    for (int i = 0; i < testSetWrapper.GetObjectCount(); ++i) {
+                        testSetWrapper.SetTarget(i, Refuse);
+                    }
+                    classifier->Classify(&testSetWrapper);             
+                    testSetWrapper.ResetObjectIndexes();
+                    targets.resize(testSetWrapper.GetObjectCount());
+                    for (int i = 0; i < testSetWrapper.GetObjectCount(); ++i) {
+                        targets[i] = testSetWrapper.GetTarget(i);
+                    }
+                    WriteVector(testTargetOutputArg.getValue(), targets);
+				}
+			}
 		}
 		else {
-			if (!testDataArg.isSet() || !trainDataArg.isSet() || 
-				testIndexesArg.isSet() || trainIndexesArg.isSet()) {
-				throw TCLAP::ArgException("Error!");
-			}
-			trainData = GetData(trainDataArg.getValue());
-			testData = GetData(testDataArg.getValue());
+			ListClassifiers();
+            ListTesters();
 		}
-
-		sh_ptr<IClassifier> classifier = CreateClassifier(classifierArg.getValue());
-
-		if (penaltiesArg.isSet()) {
-			LoadPenalties(trainData.get(), penaltiesArg.getValue());
-		}
-
-		classifier->Learn(trainData.get());
-
-		if (trainTargetOutputArg.isSet() || 
-			trainConfidencesOutputArg.isSet() ||
-			trainObjectsWeightsOutputArg.isSet()) {
-			classifier->Classify(trainData.get());
-			if (trainTargetOutputArg.isSet()) {
-				OutputTargets(trainTargetOutputArg.getValue(), *(trainData.get()));
-			}
-			if (trainConfidencesOutputArg.isSet()) {
-				OutputConfidences(trainConfidencesOutputArg.getValue(), *(trainData.get()));
-			}
-			if (trainObjectsWeightsOutputArg.isSet()) {
-				OutputWeights(trainObjectsWeightsOutputArg.getValue(), *(trainData.get()));
-			}
-		}
-
-		classifier->Classify(testData.get());
-		if (testTargetOutputArg.isSet()) {
-			OutputTargets(testTargetOutputArg.getValue(), *(testData.get()));
-		}
-		if (testConfidencesOutputArg.isSet()) {
-			OutputConfidences(testConfidencesOutputArg.getValue(), *(testData.get()));
-		}
-		if (testObjectsWeightsOutputArg.isSet()) {
-			OutputWeights(testObjectsWeightsOutputArg.getValue(), *(testData.get()));
-		}
-
-		
-		//TCLAP::ValueArg<std::string> nameArg("n", "name", "Name to print", true, "homer", "string");
-
-  //      cmd.add( nameArg );
-
-  //      TCLAP::SwitchArg reverseSwitch("r","reverse","Print name backwards", cmd, false);
-
-  //      cmd.parse( argc, argv );
-
-  //      std::string name = nameArg.getValue();
-  //      bool reverseName = reverseSwitch.getValue();
-
-  //      if (reverseName) {
-  //          std::reverse(name.begin(),name.end());
-  //          std::cout << "My name (spelled backwards) is: " << name << std::endl;
-  //      }
-  //      else {
-  //          std::cout << "My name is: " << name << std::endl;
-  //      }
-
-  //      cout << "Welcome to the Machine Learning Library!" << endl << endl;
-
-  //      ListClassifiers();
-  //      RegisterCVTesters();
-  //      ListTesters();
-  //      sh_ptr<DataSet> dataSet = LoadDataSet("../data/iris.arff");
-  //      sh_ptr<IClassifier> classifier = CreateClassifier("NaiveBayes");
-  //      sh_ptr<ITester> tester = CreateTester("Random");
-
-  //      cout << "Testing..." << endl;
-  //      double error = tester->Test(*classifier, dataSet.get());
-  //      cout << "Errors: " << error << endl;
-
-  //      return EXIT_SUCCESS;
     }
-    catch (TCLAP::ArgException &e)
-    { 
-        cerr << "error: " << e.error() << " for arg " << e.argId() << endl; 
+    catch (TCLAP::ArgException &ex) {
+		LOGE("Error: %s for arg %s", LOGSTR(ex.error()), LOGSTR(ex.argId()));
+		exit(EXIT_FAILURE);
     }
 	catch (const std::exception& ex) {
-		cerr << "Exception occurred: " << ex.what() << endl;
-        return EXIT_FAILURE;
+		LOGE("Error occurred: %s", (ex.what()));
+        exit(EXIT_FAILURE);
     }
+	catch (...) {
+		LOGE("Unhandled error occured");
+		exit(EXIT_FAILURE);
+	}
+	exit(EXIT_SUCCESS);
 }
