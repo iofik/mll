@@ -4,10 +4,10 @@
 
 using std::vector;
 
-REGISTER_TESTER(mll::RandomTester, "Random", "MLL", "Random CV");
-REGISTER_TESTER(mll::TQFoldTester, "TQFold", "MLL", "t*q-fold CV");
-REGISTER_TESTER(mll::QFoldTester, "QFold", "MLL", "q-fold CV");
-REGISTER_TESTER(mll::LeaveOneOutTester, "LOO", "MLL", "Leave-one-out CV");
+REGISTER_TESTER(mll::RandomTester, "Random", "Random CV");
+REGISTER_TESTER(mll::TQFoldTester, "TQFold", "t*q-fold CV");
+REGISTER_TESTER(mll::QFoldTester, "QFold", "q-fold CV");
+REGISTER_TESTER(mll::LeaveOneOutTester, "LOO", "Leave-one-out CV");
 
 namespace mll {
 

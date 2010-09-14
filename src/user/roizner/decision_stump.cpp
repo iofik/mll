@@ -10,13 +10,7 @@ using std::vector;
 
 REGISTER_CLASSIFIER(mll::roizner::DecisionStump,
                     "DecisionStump",
-                    "MRoizner",
                     "Decision-stump classifier");
-
-//const bool mll::roizner::DecisionStump::REGISTERED = 
-//	RegisterClassifier<mll::roizner::DecisionStump>("DecisionStump"
-//													, "MRoizner"
-//													, "Decision-stump classifier");
 
 namespace mll {
 namespace roizner {

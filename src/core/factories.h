@@ -13,14 +13,14 @@
 #define DECLARE_REGISTRATION() static const bool REGISTERED
 
 //! Macro for classifier registration in the factory
-#define REGISTER_CLASSIFIER(type, name, author, description)    \
-    const bool type::REGISTERED =                               \
-        RegisterClassifier<type>(name, author, description)
+#define REGISTER_CLASSIFIER(type, name, description)    \
+    const bool type::REGISTERED =                       \
+        RegisterClassifier<type>(name, description)
 
 //! Macro for tester registration in the factory
-#define REGISTER_TESTER(type, name, author, description)        \
-    const bool type::REGISTERED =                               \
-        RegisterTester<type>(name, author, description)    
+#define REGISTER_TESTER(type, name, description)        \
+    const bool type::REGISTERED =                       \
+        RegisterTester<type>(name, description)    
 
 namespace mll {
 
@@ -29,18 +29,16 @@ template<typename TObject>
 class FactoryEntry {
 public:
     static const FactoryEntry& EmptyEntry() {
-        static FactoryEntry emptyEntry(sh_ptr<TObject>(), "", "", "");
+        static FactoryEntry emptyEntry(sh_ptr<TObject>(), "", "");
         return emptyEntry;
     }
 
     FactoryEntry(
         sh_ptr<TObject> object,
         const std::string& name,
-        const std::string& author,
         const std::string& description)
         : object_(object),
           name_(name),
-          author_(author),
           description_(description) {
     }
 
@@ -50,10 +48,6 @@ public:
 
     const std::string& GetName() const {
         return name_;
-    }
-
-    const std::string& GetAuthor() const {
-        return author_;
     }
 
     const std::string& GetDescription() const {
@@ -67,7 +61,6 @@ public:
 private:
     sh_ptr<TObject> object_;
     std::string name_;
-    std::string author_;
     std::string description_;
 };
 
@@ -80,12 +73,9 @@ public:
 	static TFactory& Instance();
 
     bool Register(Entry entry);
-    bool Contains(const std::string& name,
-                  const std::string& author = "") const;
-    const Entry& GetEntry(const std::string& name,
-                          const std::string& author = "") const;
-	sh_ptr<TObject> Create(const std::string& name,
-                           const std::string& author = "") const;
+    bool Contains(const std::string& name) const;
+    const Entry& GetEntry(const std::string& name) const;
+	sh_ptr<TObject> Create(const std::string& name) const;
 	void GetEntries(std::vector< Entry >* entries) const;
 
     virtual ~FactoryBase() {
@@ -96,7 +86,7 @@ protected:
     }
 
 private:
-    std::map<std::string, std::vector< Entry > > entries_;
+    std::map<std::string, Entry> entries_;
 };
 
 //! IClassifier factory
@@ -110,21 +100,19 @@ class TesterFactory: public FactoryBase<TesterFactory, ITester> {
 template<typename TClassifier>
 inline bool RegisterClassifier(
     const std::string& name,
-    const std::string& author,
     const std::string& description) 
 {
     return ClassifierFactory::Instance().Register(ClassifierFactory::Entry(
-        sh_ptr<IClassifier>(new TClassifier()), name, author, description));
+        sh_ptr<IClassifier>(new TClassifier()), name, description));
 }
 
 template<typename TTester>
 inline bool RegisterTester(
     const std::string& name,
-    const std::string& author,
     const std::string& description) 
 {
     return TesterFactory::Instance().Register(TesterFactory::Entry(
-        sh_ptr<ITester>(new TTester()), name, author, description));
+        sh_ptr<ITester>(new TTester()), name, description));
 }
 
 } // namespace mll

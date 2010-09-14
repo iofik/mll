@@ -29,8 +29,7 @@ void ListClassifiers() {
     for (vector<ClassifierFactory::Entry>::const_iterator it = classifiers.begin();
          it != classifiers.end();
          ++it) {
-        cout << "\t" << it->GetName()
-             << " (" << it->GetAuthor() << "): " 
+        cout << "\t" << it->GetName() << ": " 
              << it->GetDescription() << endl;
     }
     cout << endl;
@@ -43,8 +42,7 @@ void ListTesters() {
     for (vector<TesterFactory::Entry>::const_iterator it = testers.begin();
          it != testers.end();
          ++it) {
-        cout << "\t" << it->GetName()
-             << " (" << it->GetAuthor() << "): " 
+        cout << "\t" << it->GetName() << ": " 
              << it->GetDescription() << endl;
     }
     cout << endl;
