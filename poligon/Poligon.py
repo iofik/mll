@@ -9,7 +9,6 @@ from optparse import OptionParser
 from datetime import datetime
 
 import PoligonService as poligon
-#import test.poligon as poligon
 
 logger = logging
 
