@@ -17,12 +17,7 @@ public:
     //! Predicted class labels should be written to data targets
 	virtual void Classify(IDataSet* data) const = 0;
 
-	//! Calculate confidence matrix
-	//! Dataset objects order shouldn't be changed
-	virtual void Classify(/*const*/ IDataSet* data
-							, std::vector<float>* confidence) const = 0;
-
-    //! Get a copy of the classifier
+	//! Get a copy of the classifier
     virtual sh_ptr<IClassifier> Clone() const = 0;
 
     //! Destructor
