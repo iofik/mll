@@ -67,10 +67,6 @@ sh_ptr<IClassifier> CreateClassifier(const string& classifierName) {
     if (classifier.get() == NULL) {
         throw std::logic_error("No classifier with this name registered");
     }
-    cout << "Classifier: " << classifierName << endl;
-    cout << "Parameters:" << endl;
-    classifier->PrintParameters(true, true);
-    cout << endl;
     return classifier;
 }
 
@@ -151,6 +147,23 @@ void LoadPenalties(DataSet* dataSet, const string& filename) {
     }
 }
 
+void LoadParameters(sh_ptr<IClassifier> classifier, const string& filename) {
+    ifstream input(filename.c_str());
+    string line;
+    while (input >> line) {
+        int index = line.find('=');
+        if (index == string::npos) {
+            throw std::logic_error("Incorrect algorithm parameter");
+        }
+        string paramaterName = line.substr(0, index);
+        string parameterValue = line.substr(index + 1);
+        if (!classifier->SetParameter(paramaterName, parameterValue)) {
+            cerr << "Parameter " << paramaterName
+                 << " could not be set to " << parameterValue << endl;
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     try {
 		typedef TCLAP::ValueArg<string> StringArg;
@@ -172,9 +185,11 @@ int main(int argc, char** argv) {
 			"", "trainIndexes", "File with train indexes", false, "", "string", cmd);
 		StringArg penaltiesArg(
 			"", "penalties", "File with penalties", false, "", "string", cmd);
+        StringArg classifierParametersArg(
+            "", "parameters", "File with algorithm parameters", false, "", "string", cmd);
 		
 		StringArg testTargetOutputArg(
-			"", "testTargetOutput", "File to write target of test set", 
+			"", "testTargetOutput", "File to write targets of test set", 
 			false, "", "string", cmd);
 		StringArg testConfidencesOutputArg(
 			"", "testConfidencesOutput", "File to write confidences of test set", 
@@ -249,7 +264,11 @@ int main(int argc, char** argv) {
 
 		sh_ptr<IClassifier> classifier = CreateClassifier(classifierArg.getValue());
 
-		if (penaltiesArg.isSet()) {
+        if (classifierParametersArg.isSet()) {
+            LoadParameters(classifier, classifierParametersArg.getValue());
+        }
+
+        if (penaltiesArg.isSet()) {
 			LoadPenalties(&trainDataSet, penaltiesArg.getValue());
 			LoadPenalties(&testDataSet, penaltiesArg.getValue());
 		}
