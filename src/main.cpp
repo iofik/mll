@@ -117,8 +117,8 @@ void WriteMatrix(const std::string& fileName, const typename std::vector<T> &dat
     for (typename std::vector<T>::const_iterator it = data.begin()
         ; it != data.end(); ++it) {
 		output << *it;
-		if ((it + 1 - data.begin()) % columns) output << " ";
-		else output << std::endl;
+		if ((it + 1 - data.begin()) % columns) { output << " "; }
+		else { output << std::endl; }
     }
     LOGD("%d x %d matrix written to '%s'", (data.size() / columns), columns, LOGSTR(fileName));
 }
@@ -133,24 +133,24 @@ void Classify(const IClassifier& classifier
 		// NOTE: Assume that targets is numeric sequence starting from 0
 		classifier.Classify(dataSet, confidence);
 		std::vector<int>::iterator target = targets->begin();
-        for (std::vector<float>::iterator it = confidence->begin()
+		for (std::vector<float>::iterator it = confidence->begin()
 			; it != confidence->end(); it += dataSet->GetClassCount(), ++target) {
-            std::vector<float>::iterator current =
+			std::vector<float>::iterator current =
 				std::max_element(it, it + dataSet->GetClassCount());
-            if (*current > 0.f) *target = current - it;                    
-        }
+			if (*current > 0.f) { *target = current - it; }
+		}
 	}
-    else {
+	else {
 		DataSetWrapper wrapper(dataSet);
 		for (int i = 0; i < wrapper.GetObjectCount(); ++i) {
 			wrapper.SetTarget(i, Refuse);
-        }
-        classifier.Classify(&wrapper);
-        wrapper.ResetObjectIndexes();
-        for (int i = 0; i < wrapper.GetObjectCount(); ++i) {
+		}
+		classifier.Classify(&wrapper);
+		wrapper.ResetObjectIndexes();
+		for (int i = 0; i < wrapper.GetObjectCount(); ++i) {
 			(*targets)[i] = wrapper.GetTarget(i);
-        }
-    }
+		}
+	}
 }
 
 const FILE* logger = LOGHDR(stderr);
