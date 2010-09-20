@@ -126,29 +126,22 @@ void WriteMatrix(const std::string& fileName, const typename std::vector<T> &dat
 void Classify(const IClassifier& classifier
 				, /*const*/ IDataSet* dataSet
 				, std::vector<int>* targets
-				, std::vector<float>* confidence = NULL) {
+				, std::vector<double>* confidence) {
 	targets->clear();
 	targets->resize(dataSet->GetObjectCount(), Refuse);
-	if (confidence) {
-		// NOTE: Assume that targets is numeric sequence starting from 0
-		classifier.Classify(dataSet, confidence);
-		std::vector<int>::iterator target = targets->begin();
-		for (std::vector<float>::iterator it = confidence->begin()
-			; it != confidence->end(); it += dataSet->GetClassCount(), ++target) {
-			std::vector<float>::iterator current =
-				std::max_element(it, it + dataSet->GetClassCount());
-			if (*current > 0.f) { *target = current - it; }
-		}
+	confidence->clear();
+	confidence->resize(dataSet->GetObjectCount() * dataSet->GetClassCount());
+	DataSetWrapper wrapper(dataSet);
+	for (int i = 0; i < wrapper.GetObjectCount(); ++i) {
+		wrapper.SetTarget(i, Refuse);
 	}
-	else {
-		DataSetWrapper wrapper(dataSet);
-		for (int i = 0; i < wrapper.GetObjectCount(); ++i) {
-			wrapper.SetTarget(i, Refuse);
-		}
-		classifier.Classify(&wrapper);
-		wrapper.ResetObjectIndexes();
-		for (int i = 0; i < wrapper.GetObjectCount(); ++i) {
-			(*targets)[i] = wrapper.GetTarget(i);
+	classifier.Classify(&wrapper);
+	wrapper.ResetObjectIndexes();
+	for (int i = 0; i < wrapper.GetObjectCount(); ++i) {
+		(*targets)[i] = wrapper.GetTarget(i);
+		for (int j = 0; j < wrapper.GetClassCount(); ++j) {
+			// NOTE: Assume that targets is numeric sequence starting from 0
+			(*confidence)[i * wrapper.GetClassCount() + j] = wrapper.GetConfidence(i, j);
 		}
 	}
 }
@@ -258,8 +251,10 @@ int main(int argc, char** argv) {
 
 			{
 				std::vector<int> targets;
-				std::vector<float> confidence;
+				std::vector<double> confidence;
+
 				targets.reserve(dataSet->GetObjectCount());
+				confidence.reserve(dataSet->GetObjectCount() * dataSet->GetClassCount());
 
 				LOGI("Classifing train data set...");
 				Classify(*classifier, &trainSet, &targets, &confidence);
@@ -275,7 +270,7 @@ int main(int argc, char** argv) {
                 if (testConfidencesOutputArg.isSet()) {
                     WriteMatrix(testConfidencesOutputArg.getValue()
 								, confidence
-								, trainSet.GetClassCount());
+								, testSet.GetClassCount());
                 }
 				WriteVector(testTargetOutputArg.getValue(), targets);
 			}	
