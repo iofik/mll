@@ -129,7 +129,17 @@ public:
         if (confidences_.get() != NULL) {
             return confidences_->at(GetActualObjectIndex(objectIndex)).at(target);
         } else {
-            return dataSet_->GetConfidence(GetActualObjectIndex(objectIndex), target);
+			if (target == Refuse) {
+	            return 0;
+		    }
+			int actualTarget = GetTarget(objectIndex);
+			if (target == actualTarget) {
+				return 1.0;
+			} else if (actualTarget == Refuse) {
+				return 1.0 / GetClassCount();
+			} else {
+				return 0;
+			}
         }
     }
 
