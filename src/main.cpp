@@ -231,7 +231,7 @@ int main(int argc, char** argv) {
                 throw TCLAP::ArgException("Too many datasets specified");
             } 
 			if (!testIndexesArg.isSet() || !trainIndexesArg.isSet()) {
-				throw TCLAP::ArgException("Dataset indices is not specified");
+				throw TCLAP::ArgException("Dataset indices not specified");
 			}
 			LoadDataSet(&trainDataSet, fullDataArg.getValue());
             vector<int> indexes;
