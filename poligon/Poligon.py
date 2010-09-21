@@ -12,48 +12,20 @@ import PoligonService as poligon
 
 logger = logging
 
-def load_task_data(task, algPassword, dataFile, learnIndexes, testIndexes, algProperties):
-  """Writes problem data, indexes and alg params into the given path"""  
-  
-  class Indexes(object):
-        
-    def __init__(self, learn, test):
-      self.test = test
-      self.learn = learn
- 
-  # 1. Loading problem data 
-  problem = poligon.get_problem(task.ProblemSynonim, task.AlgSynonim, algPassword)
+LEARN_INDEXES_FILE = "learn_indexes.txt"
+TEST_INDEXES_FILE = "test_indexes.txt"
+PARAMETERS_FILE = "parameters.txt"
+PENALTIES_FILE = "penalties.txt"
 
-  if not problem:
-    logger.error(
-      'Can\'t load problem \'{0}\' from server'.format(task.ProblemSynonim))
-  
-  logger.debug(
-    'Problem \'{0}\' received with {1} rows'.format(
-      task.ProblemSynonim, len(problem.DataMatrix.ArrayOfDouble)))
-  
-  objects, properties, classes = _save_as_arff(problem, task.ProblemSynonim, dataFile)
-  logger.debug('Problem data saved as \'{0}\''.format(dataFile))  
-  
-  # 2. Saving indexes
-  test = _save_indexes(task.TestIndexes, testIndexes)
-  logger.debug('{0} test indexes saved'.format(len(test)))
-  
-  learn = _save_indexes(task.LearnIndexes, learnIndexes)  
-  logger.info('{0} learn indexes saved'.format(len(learn)))
-  
-  if len(test) != len(learn):
-    logger.error('Indexes count mismatch')
-    
-  indexes = []
-  for i in range(0, len(learn)):
-    indexes.append(Indexes(learn[i], test[i]))
-    
-  # 3. Writing alg properties
-  count = _save_params(task, algProperties)
-  logger.info('{0} alg params saved as \'{1}\''.format(count, algProperties))
-  
-  return indexes #, properties, classes
+LEARN_TARGETS_FILE = "learn_targets.txt"
+LEARN_PROBABILITY_MATRIX_FILE = "learn_probabilities.txt"
+LEARN_OBJECTS_WEIGHTS_FILE = "learn_objects_weights.txt"
+LEARN_PROPERTIES_WEIGHTS_FILE = "learn_properties_weights.txt"
+
+TEST_TARGETS_FILE = "test_targets.txt"
+TEST_PROBABILITY_MATRIX_FILE = "test_probabilities.txt"
+TEST_OBJECTS_WEIGHTS_FILE = "test__objects_weights.txt"
+TEST_PROPERTIES_WEIGHTS_FILE = "test_properties_weights.txt"
 
 def _save_as_arff(problem, synonim, path):
   """Writes problem data in arff format"""
@@ -113,28 +85,6 @@ def _save_as_arff(problem, synonim, path):
     , len(problem.PropertiesDescription.PropertyDescription) \
     , classes
   
-def _save_indexes(indexes, path):
-  """Writes indexes into separate files"""
-  
-  class Index(object):
-    
-    def __init__(self):
-      self.file = ''
-      self.count = 0
-
-  (root, ext) = os.path.splitext(path)
-
-  items = []
-  for i in range(len(indexes.ArrayOfInt)):
-    index = Index()
-    index.file = '{0}_{1}{2}'.format(root, i, ext) 
-    index.count = len(indexes.ArrayOfInt[i].Int)   
-    file = open(index.file, 'w')
-    for j in range(len(indexes.ArrayOfInt[i].Int)):
-      file.write('{0}\n'.format(indexes.ArrayOfInt[i].Int[j]))
-    file.close()    
-    items.append(index)
-  return items
   
 def _save_params(task, path):
   """Writes alg params into the given file"""
@@ -144,7 +94,7 @@ def _save_params(task, path):
   file = open(path, 'w')
   try:
     if task.AlgParamNames:
-      for i in range(len(task.AlgParamNames.String)):
+      for i in xrange(len(task.AlgParamNames.String)):
         if task.AlgParamUsages.Boolean[i]:
           count += 1
           file.write('{0}={1}\n'.format(
@@ -157,35 +107,55 @@ def _save_params(task, path):
   return count
 
 def _load_vector(name, type=str):
-  vector = []
-  file = open(name)
-  text = file.read()
-  file.close()
-  lines = text.split('\n')
-  for line in lines:
-    if (len(line)):
-      vector.append(type(line))
-  return vector
+  try:
+    vector = []
+    file = open(name)
+    text = file.read()
+    file.close()
+    lines = text.split('\n')
+    for line in lines:
+      if (len(line)):
+        vector.append(type(line))
+    return vector
+  except:
+    return []
   
 def _load_matrix(name, type=str):
-  matrix = []
-  file = open(name)
-  text = file.read()
-  file.close()
-  lines = text.split('\n')
-  for line in lines:
-    if not line: break
-    items = line.split(' ')
-    if not items: break
-    vector = []
-    for item in items:
-      vector.append(type(item))
-    matrix.append(vector)
-  return matrix
+  try:
+    matrix = []
+    file = open(name)
+    text = file.read()
+    file.close()
+    lines = text.split('\n')
+    for line in lines:
+      if not line: break
+      items = line.split(' ')
+      if not items: break
+      vector = []
+      for item in items:
+        vector.append(type(item))
+      matrix.append(vector)
+    return matrix
+  except:
+    return []
+  
+def _save_vector(vector, filename):
+  output = open(filename, 'w')
+  for v in vector:
+    print >> output, v
+  output.close()
+  
+def _save_matrix(matrix, filename):
+  output = open(filename, 'w')
+  for line in matrix:
+    for v in line:
+      print >> output, v,
+    print >> output
+  output.close()
 
 def _init_logger():
   today = datetime.today()
-  logger = logging.getLogger('Daemon')
+  logger = logging.getLogger('Poligon')
   logger.setLevel(logging.DEBUG)
 
   stream_handler = logging.StreamHandler()
@@ -209,158 +179,168 @@ def _init_logger():
 
 def _init_optparser():
   parser = OptionParser()
-  parser.add_option("-c", "--classifier", dest="classifier",
-                    help="Classifier name")
-  parser.add_option("-e", "--executable", dest="executable", default="mll",
-                    help="Executable file path")
-  parser.add_option("-S", "--algSynonim", dest="algSynonim",
-                    help="Poligon alg synonim")
-  parser.add_option("-P", "--algPassword", dest="algPassword",
-                    help="Poligon alg password")
-  parser.add_option("-d", "--data", dest="data", default="data.arff",
-                    help="Received data file path")
-  parser.add_option("-l", "--learnIndexes", dest="learnIndexes", default="learnIndexes.dat",
-                    help="Learn indexes file path")
-  parser.add_option("-t", "--testIndexes", dest="testIndexes", default="testIndexes.dat",
-                    help="Test indexes file path")
-  #parser.add_option("-p", "--penalties", dest="penalties", default="penalties.dat",
-  #                  help="Penalty matrix file path")
-  parser.add_option("-r", "--algProperties", dest="algProperties", default="algProperties.dat",
-                    help="Classifier properties output file path")
-  parser.add_option("-A", "--learnTargetOutput", dest="learnTargetOutput", default="learnTarget.dat",
-                    help="Learn targets output file path")
-  parser.add_option("-T", "--testTargetOutput", dest="testTargetOutput", default="testTarget.dat",
-                    help="Test targets output file path")
-  parser.add_option("-N", "--learnProbOutput", dest="learnProbOutput", default="learnProbOutput.dat",
-                    help="Learn probabilyties output file path")
-  parser.add_option("-R", "--testProbOutput", dest="testProbOutput", default="testProbOutput.dat",
-                    help="Test probabilyties output file path")
-  #parser.add_option("-C", "--confidenceOutput", dest="confidenceOutput", default="confidenceOutput.dat",
-  #                  help="Confidence output file path")
-  #parser.add_option("-F", "--featureWeightsOutput", dest="featureWeightsOutput", default="featureWeightsOutput.dat",
-  #                  help="Feature weights output file path")
-  #parser.add_option("-W", "--objectWeightsOutput", dest="objectWeightsOutput", default="objectWeightsOutput.dat",
-  #                  help="Object weights output file path")
-  #parser.add_option("-L", "--logFile", dest="logFile", default="poligon.log",
-  #                  help="Log file ouput path")
-  #parser.add_option("-V", "--logLevel", dest="logLevel", default="0xf",
-  #					help="Log level mask")
-  parser.add_option("-B", "--batchMode", dest="batchMode", default="off",
-                    help="Set to 'on' to process all tasks")
+  parser.add_option("-c", "--commands", dest="commands", default="commands.txt",
+                    help="Algorithm commands file")
+  parser.add_option("-s", "--algsynonim", dest="algsynonim",
+                    help="Algorithm synonim at Poligon")
+  parser.add_option("-p", "--algpassword", dest="algpassword",
+                    help="Algorithm password at Poligon")
+  parser.add_option("-d", "--datasets", dest="datasets", default="datasets",
+                    help="Folder with saved datasets")
+  parser.add_option("-t", "--timeout", dest="timeout", type="int", default=10,
+                    help="Timeout for algorithm process, minutes")
+  parser.add_option("-w", "--wait", dest="wait", type="int", default=0,
+                    help="Wait period between series of requests, minutes (0 for requsting once)")
   return parser
 
-if __name__ == '__main__':
+class Result(object):
 
-  class Result(object):
-
-    class Data(object):
-
-      def __init__(self):
-        self.Error = False
-        self.ErrorException = ''
-        self.ProbabilityMatrix = []
-        self.Targets = []
-        self.PropertiesWeights = []
-        self.ObjectsWeights = []
+  class Data(object):
 
     def __init__(self):
       self.Error = False
       self.ErrorException = ''
-      self.Test = Result.Data()
-      self.Learn = Result.Data()
+      self.ProbabilityMatrix = []
+      self.Targets = []
+      self.PropertiesWeights = []
+      self.ObjectsWeights = []
 
+  def __init__(self):
+    self.Error = False
+    self.ErrorException = ''
+    self.Test = Result.Data()
+    self.Learn = Result.Data()
+    
+def ReadCommands(commandsFile):
+  input = open(commandsFile)
+  commands = []
+  for line in input:
+    command = line.split()
+    if len(command) > 0:
+      commands.add(command)
+  return commands
+
+def GetProblem(problemName, options):
+  path = os.path.abspath(os.path.join(options.dataset, name + '.arff'))
+  if os.path.exists(path):
+    return path
+  else:
+    logger.debug("Requesting problem " + problemName)
+    problem = poligon.get_problem(problemName, options.algsynonim, options.algpassword)
+    if not problem:
+      raise Exception("Could not get problem " + problemName)
+    _save_as_arff(problem, problemName, path)
+    return path
+    
+def Substitute(command, prefix):
+  command = command.replace("%LEARN_INDEXES%", prefix + LEARN_INDEXES_FILE)
+  command = command.replace("%TEST_INDEXES%", prefix + TEST_INDEXES_FILE)
+  command = command.replace("%PARAMETERS%", prefix + PARAMETERS_FILE)
+  command = command.replace("%PENALTIES%", prefix + PENALTIES_FILE)
+  command = command.replace("%LEARN_TARGETS%", prefix + LEARN_TARGETS_FILE)
+  command = command.replace("%LEARN_PROBABILITY_MATRIX%", prefix + LEARN_PROBABILITY_MATRIX_FILE)
+  command = command.replace("%LEARN_OBJECTS_WEIGHTS%", prefix + LEARN_OBJECTS_WEIGHTS_FILE)
+  command = command.replace("%LEARN_PROPERTIES_WEIGHTS%", prefix + LEARN_PROPERTIES_WEIGHTS_FILE)
+  command = command.replace("%TEST_TARGETS%", prefix + TEST_TARGETS_FILE)
+  command = command.replace("%TEST_PROBABILITY_MATRIX%", prefix + TEST_PROBABILITY_MATRIX_FILE)
+  command = command.replace("%TEST_OBJECTS_WEIGHTS%", prefix + TEST_OBJECTS_WEIGHTS_FILE)
+  command = command.replace("%TEST_PROPERTIES_WEIGHTS%", prefix + TEST_PROPERTIES_WEIGHTS_FILE)
+  return command
+  
+def Execute(command, timeout):
+  logger.debug("Executing command: " + command)
+  process = subprocess.Popen(command)
+  process.poll()
+  while process.returncode == None:
+    if timeout[0] < 0:
+      process.kill()
+      logger.warn("Process timed out")
+      return False
+    time.sleep(10)
+    timeout[0] -= 10
+    process.poll()
+  logger.debug("Command completed")
+  if process.returncode == 0:
+    return True
+  else:
+    logger.warn("Process exited with error code: " + str(process.returncode))
+    return False
+
+def RunCommands(commands, options, prefix):
+  timeout = [options.timeout]
+  for command in commands:
+    command = Substitute(command, prefix)
+    if not Execute(command, timeout):
+      return False
+  return True
+
+def GetResult(prefix):
+  result = Result()
+  result.Learn.Targets = _load_vector(prefix + LEARN_TARGETS_FILE, int)
+  result.Learn.ProbabilityMatrix = _load_matrix(prefix + LEARN_PROBABILITY_MATRIX_FILE, float)
+  result.Learn.ObjectsWeights = _load_vector(prefix + LEARN_OBJECTS_WEIGHTS_FILE, float)
+  result.Learn.PropertiesWeights = _load_vector(prefix + LEARN_PROPERTIES_WEIGHTS_FILE, float)
+  result.Test.Targets = _load_vector(prefix + TEST_TARGETS_FILE, int)
+  result.Test.ProbabilityMatrix = _load_matrix(prefix + TEST_PROBABILITY_MATRIX_FILE, float)
+  result.Test.ObjectsWeights = _load_vector(prefix + TEST_OBJECTS_WEIGHTS_FILE, float)
+  result.Test.PropertiesWeights = _load_vector(prefix + TEST_PROPERTIES_WEIGHTS_FILE, float)
+  return result
+  
+def ProcessTask(task, options, commands):
+  problem = GetProblem(task.ProblemSynonim, options)
+  results = []
+  for i in xrange(len(task.LearnIndexes.ArrayOfInt)):
+    logger.debug("Starting " + str(task.PocketId) + ":" + str(i))
+    prefix = str(task.PocketId) + "_" + str(i) + "_"
+    
+    _save_vector(task.LearnIndexes.ArraOfInt[i].Int, prefix + LEARN_INDEXES_FILE)
+    _save_vector(task.TestIndexes.ArraOfInt[i].Int, prefix + TEST_INDEXES_FILE)
+    _save_params(task, prefix + PARAMETERS_FILE)
+    
+    if RunCommands(commands, options, prefix):
+      result = GetResult(prefix)
+    else:
+      result = Result()
+      result.Error = True
+      result.Exception = "Process execution error"
+    
+    results.add(result)
+    
+  return results  
+    
+def Run(options):
+  commands = ReadCommands(options.commands)
+  
+  while True:
+  
+    while True:
+      logger.debug("Requsting task...")
+      task = poligon.get_task(options.algsynonim, options.algpassword)
+      if task:
+        logger.info("Got task for " + task.AlgSynonim + ". Problem: " + task.ProblemSynonim +
+                    ", PocketId: " + task.PocketId)
+        results = ProcessTask(task, options, commands)
+        logger.debug("Task is processed. Registering results...")
+        poligon.register_results(options.algsynonim, options.algpassword, task.PocketId, results)
+        logger.info("Task is processed and results have been registered")
+      else:
+        break
+  
+    if options.wait == 0:
+      break
+    else:
+      logger.info("No more tasks. Going to sleep...")
+      time.sleep(options.wait * 60)
+  logger.info("No more tasks. Exiting...")
+  
+if __name__ == '__main__':
   logger = _init_logger()
   parser = _init_optparser()
-  
+
   (options, args) = parser.parse_args()
   logger.debug(options)
-
-  # 1. Loading task info from poligon server
-  task = poligon.get_task(options.algSynonim
-							, options.algPassword)
-
-  if not task:
-    logger.info(
-      "There is no task for {0} {1}".format(
-        options.algSynonim, options.algPassword))
-    exit()
-
-  while task:
-
-    # 2. Loading task data and creating input files
-    indexes = load_task_data(task, options.algPassword
-                            , options.data
-                            , options.learnIndexes
-                            , options.testIndexes
-                            , options.algProperties)
-
-    results = []
-
-    for index in indexes:
-      result = Result()
-      # 3. Executing algorithm
-      args = [options.executable
-			, "classify"
-			, "--classifier"             , options.classifier     
-			, "--data"			         , options.data  
-			, "--trainIndexes"		     , index.learn.file
-            , "--testIndexes"		     , index.test.file
-			, "--trainTargetOutput"	     , options.learnTargetOutput
-			, "--testTargetOutput"       , options.testTargetOutput
-			, "--trainConfidencesOutput" , options.learnProbOutput
-			, "--testConfidencesOutput"  , options.testProbOutput]
-    
-      logger.info('Executing {0}...'.format(options.executable))
-      logger.debug(str(args))
-
-      try:
-        popen = subprocess.Popen(args)
-        popen.wait()
-      except:
-        result.Error = True
-        result.ErrorException = \
-          'Error occured while executing process: {0}'.format(sys.exc_info()[0])
-        logger.error(result.ErrorException)
-        results.append(result)
-        continue
-
-      # 4. Handling errors
-      if popen.returncode:
-        result.Error = True
-        result.ErrorException = \
-          'Process exited with error code: {0}'.format(popen.returncode)
-        logger.error(result.ErrorException)
-        results.append(result)
-        continue
-
-      # 5. Loading results
-
-      result.Test.Targets = _load_vector(options.testTargetOutput, int)
-      result.Learn.Targets = _load_vector(options.learnTargetOutput, int)
-
-      result.Test.ProbabilityMatrix = _load_matrix(options.testProbOutput, int)      
-      result.Learn.ProbabilityMatrix = _load_matrix(options.learnProbOutput, int)
-
-      logger.debug("Test results size: {0} {1}".format(
-        len(result.Test.Targets), len(result.Test.ProbabilityMatrix)))
-      
-      logger.debug("Learn results size: {0} {1}".format(
-        len(result.Learn.Targets), len(result.Learn.ProbabilityMatrix)))
-
-      results.append(result)                    # Saving targets
-
-    logger.info('Registering results {0}'.format(len(results)))
-
-    # 6. Registering results
-    poligon.register_results(options.algSynonim
-							, options.algPassword
-                            , task.PocketId
-							, results)
-
-    if options.batchMode != 'on': break
-    
-    # 7. Requesting next task
-    task = poligon.get_task(options.algSynonim
-                            , options.algPassword)
-    
-
+  
+  try:
+    Run(options)
+  except Exception as ex:
+    logger.error(ex)
