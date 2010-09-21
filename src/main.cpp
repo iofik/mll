@@ -130,6 +130,9 @@ void OutputWeights(const string& filename, const IDataSet& dataSet) {
 
 void LoadPenalties(DataSet* dataSet, const string& filename) {
     ifstream input(filename.c_str());
+    if (!input.is_open()) {
+        return;
+    }
     MetaData& metaData = dataSet->GetMetaData();
     string line;
     for (int i = 0; i < metaData.GetClassCount(); ++i) {
