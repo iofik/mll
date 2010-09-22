@@ -8,9 +8,9 @@ URL = 'http://poligon.machinelearning.ru/ProcessingService.asmx'
 
 TODAY = datetime.today()
 
-TRACE_FILE = open(TODAY.strftime('trace_%Y%m%d_%H%M%S.xml'), 'w')
+#TRACE_FILE = open(TODAY.strftime('trace_%Y%m%d_%H%M%S.xml'), 'w')
 
-KW = { 'tracefile' : TRACE_FILE }
+KW = { }#'tracefile' : TRACE_FILE }
 
 service = ProcessingServiceSoapSOAP(URL, **KW)
 

@@ -221,7 +221,9 @@ def ReadCommands(commandsFile):
   return commands
 
 def GetProblem(problemName, options):
-  path = os.path.abspath(os.path.join(options.datasets, problemName + '.arff'))
+  if not os.path.exists(options.datasets):
+    os.mkdir(options.datasets)
+  path = os.path.join(options.datasets, problemName + '.arff')
   if os.path.exists(path):
     return path
   else:
@@ -287,6 +289,23 @@ def GetResult(prefix):
   result.Test.PropertiesWeights = _load_vector(prefix + TEST_PROPERTIES_WEIGHTS_FILE, float)
   return result
   
+def DeleteFile(filename):
+  if os.path.exists(filename):
+    os.remove(filename)
+    
+def Clean(prefix):
+  DeleteFile(prefix + LEARN_INDEXES_FILE)
+  DeleteFile(prefix + TEST_INDEXES_FILE)
+  DeleteFile(prefix + PARAMETERS_FILE)
+  DeleteFile(prefix + LEARN_TARGETS_FILE)
+  DeleteFile(prefix + LEARN_PROBABILITY_MATRIX_FILE)
+  DeleteFile(prefix + LEARN_OBJECTS_WEIGHTS_FILE)
+  DeleteFile(prefix + LEARN_PROPERTIES_WEIGHTS_FILE)
+  DeleteFile(prefix + TEST_TARGETS_FILE)
+  DeleteFile(prefix + TEST_PROBABILITY_MATRIX_FILE)
+  DeleteFile(prefix + TEST_OBJECTS_WEIGHTS_FILE)
+  DeleteFile(prefix + TEST_PROPERTIES_WEIGHTS_FILE)
+  
 def ProcessTask(task, options, commands):
   problem = GetProblem(task.ProblemSynonim, options)
   results = []
@@ -300,6 +319,7 @@ def ProcessTask(task, options, commands):
     
     if RunCommands(commands, options, prefix, problem):
       result = GetResult(prefix)
+      Clean(prefix)
     else:
       result = Result()
       result.Error = True
