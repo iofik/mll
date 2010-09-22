@@ -30,7 +30,7 @@ def get_task(algsynonim, password):
       return None
   except:
     logger.error(
-      'Error occured while requesting task for \'{0}\'\n{1}'.format(algsynonim, sys.exc_info()[0]))
+      'Error occurried while requesting task for \'{0}\' (password: \'{1}\'): {2}'.format(algsynonim, password, sys.exc_info()[1]))
     return None
     
   return response.GetTaskResult
@@ -147,7 +147,7 @@ def register_results(algsynonim, password, pocketid, results):
     return response.RegisterResultResult 
   except:
     logger.error(
-      'Error occured while posting results \'{0}\'\n{1}'.format(pocketid, sys.exc_info()[0]))
+      'Error occured while posting results \'{0}\':{1}'.format(pocketid, sys.exc_info()[1]))
     
   return None
 

@@ -161,11 +161,11 @@ def _init_logger():
   stream_handler = logging.StreamHandler()
 
   file_handler   = logging.FileHandler(
-					today.strftime('poligon_%Y%m%d_%H%M%S.log')
-					, encoding='utf-8')
+                    today.strftime('poligon_%Y%m%d_%H%M%S.log')
+                    , encoding='utf-8')
 
   formatter = logging.Formatter(
-					"%(asctime)s\t%(levelname)s\t%(message)s")
+                    "%(asctime)s\t%(levelname)s\t%(message)s")
 
   stream_handler.setFormatter(formatter)
   file_handler.setFormatter(formatter)
@@ -215,13 +215,13 @@ def ReadCommands(commandsFile):
   input = open(commandsFile)
   commands = []
   for line in input:
-    command = line.split()
+    command = line.strip()
     if len(command) > 0:
-      commands.add(command)
+      commands.append(command)
   return commands
 
 def GetProblem(problemName, options):
-  path = os.path.abspath(os.path.join(options.dataset, name + '.arff'))
+  path = os.path.abspath(os.path.join(options.datasets, problemName + '.arff'))
   if os.path.exists(path):
     return path
   else:
@@ -232,11 +232,11 @@ def GetProblem(problemName, options):
     _save_as_arff(problem, problemName, path)
     return path
     
-def Substitute(command, prefix):
+def Substitute(command, prefix, dataFile):
   command = command.replace("%LEARN_INDEXES%", prefix + LEARN_INDEXES_FILE)
   command = command.replace("%TEST_INDEXES%", prefix + TEST_INDEXES_FILE)
   command = command.replace("%PARAMETERS%", prefix + PARAMETERS_FILE)
-  command = command.replace("%PENALTIES%", prefix + PENALTIES_FILE)
+  #command = command.replace("%PENALTIES%", prefix + PENALTIES_FILE)
   command = command.replace("%LEARN_TARGETS%", prefix + LEARN_TARGETS_FILE)
   command = command.replace("%LEARN_PROBABILITY_MATRIX%", prefix + LEARN_PROBABILITY_MATRIX_FILE)
   command = command.replace("%LEARN_OBJECTS_WEIGHTS%", prefix + LEARN_OBJECTS_WEIGHTS_FILE)
@@ -245,6 +245,7 @@ def Substitute(command, prefix):
   command = command.replace("%TEST_PROBABILITY_MATRIX%", prefix + TEST_PROBABILITY_MATRIX_FILE)
   command = command.replace("%TEST_OBJECTS_WEIGHTS%", prefix + TEST_OBJECTS_WEIGHTS_FILE)
   command = command.replace("%TEST_PROPERTIES_WEIGHTS%", prefix + TEST_PROPERTIES_WEIGHTS_FILE)
+  command = command.replace("%DATA_FILE%", dataFile)
   return command
   
 def Execute(command, timeout):
@@ -266,10 +267,10 @@ def Execute(command, timeout):
     logger.warn("Process exited with error code: " + str(process.returncode))
     return False
 
-def RunCommands(commands, options, prefix):
+def RunCommands(commands, options, prefix, dataFile):
   timeout = [options.timeout]
   for command in commands:
-    command = Substitute(command, prefix)
+    command = Substitute(command, prefix, dataFile)
     if not Execute(command, timeout):
       return False
   return True
@@ -293,18 +294,18 @@ def ProcessTask(task, options, commands):
     logger.debug("Starting " + str(task.PocketId) + ":" + str(i))
     prefix = str(task.PocketId) + "_" + str(i) + "_"
     
-    _save_vector(task.LearnIndexes.ArraOfInt[i].Int, prefix + LEARN_INDEXES_FILE)
-    _save_vector(task.TestIndexes.ArraOfInt[i].Int, prefix + TEST_INDEXES_FILE)
+    _save_vector(task.LearnIndexes.ArrayOfInt[i].Int, prefix + LEARN_INDEXES_FILE)
+    _save_vector(task.TestIndexes.ArrayOfInt[i].Int, prefix + TEST_INDEXES_FILE)
     _save_params(task, prefix + PARAMETERS_FILE)
     
-    if RunCommands(commands, options, prefix):
+    if RunCommands(commands, options, prefix, problem):
       result = GetResult(prefix)
     else:
       result = Result()
       result.Error = True
       result.Exception = "Process execution error"
     
-    results.add(result)
+    results.append(result)
     
   return results  
     
@@ -318,7 +319,7 @@ def Run(options):
       task = poligon.get_task(options.algsynonim, options.algpassword)
       if task:
         logger.info("Got task for " + task.AlgSynonim + ". Problem: " + task.ProblemSynonim +
-                    ", PocketId: " + task.PocketId)
+                    ", PocketId: " + str(task.PocketId))
         results = ProcessTask(task, options, commands)
         logger.debug("Task is processed. Registering results...")
         poligon.register_results(options.algsynonim, options.algpassword, task.PocketId, results)

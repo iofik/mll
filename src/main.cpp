@@ -174,8 +174,7 @@ int main(int argc, char** argv) {
     try {
 		typedef TCLAP::ValueArg<string> StringArg;
         TCLAP::CmdLine cmd("Command description message", ' ', "0.1");
-        cmd.~CmdLine
-
+        
 		TCLAP::UnlabeledValueArg<string> commandTypeArg(
 			"command", "Type of command", true, "", "string", cmd);
 		StringArg classifierArg(
@@ -202,7 +201,7 @@ int main(int argc, char** argv) {
 			"", "testConfidencesOutput", "File to write confidences of test set", 
 			false, "", "string", cmd);
 		StringArg testObjectsWeightsOutputArg(
-			"", "testFeatureWeightsOutput", "File to write objects weights of test set", 
+			"", "testObjectWeightsOutput", "File to write objects weights of test set", 
 			false, "", "string", cmd);
 
 		StringArg trainTargetOutputArg(
@@ -212,7 +211,7 @@ int main(int argc, char** argv) {
 			"", "trainConfidencesOutput", "File to write confidences of test set", 
 			false, "", "string", cmd);
 		StringArg trainObjectsWeightsOutputArg(
-			"", "trainFeatureWeightsOutput", "File to write objects weights of test set", 
+			"", "trainObjectWeightsOutput", "File to write objects weights of test set", 
 			false, "", "string", cmd);
 
 		StringArg featureWeightsOutputArg(
