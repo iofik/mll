@@ -175,8 +175,14 @@ int main(int argc, char** argv) {
 		typedef TCLAP::ValueArg<string> StringArg;
         TCLAP::CmdLine cmd("Command description message", ' ', "0.1");
         
-		TCLAP::UnlabeledValueArg<string> commandTypeArg(
-			"command", "Type of command", true, "", "string", cmd);
+        vector<string> commands;
+        commands.push_back("classify");
+        commands.push_back("listc");
+        commands.push_back("listt");
+        commands.push_back("test");
+        TCLAP::ValuesConstraint<string> constraint(commands);
+        TCLAP::UnlabeledValueArg<string> commandTypeArg(
+            "command", "Command", true, "", &constraint, cmd);
 		StringArg classifierArg(
 			"c", "classifier", "Name of classifier", false, "", "string", cmd);
 		StringArg fullDataArg(
@@ -220,92 +226,101 @@ int main(int argc, char** argv) {
 
 		cmd.parse(argc, argv);
 
-		if (!classifierArg.isSet()) {
-			throw TCLAP::ArgException("Classifier is not specified");
-		}
+        if (commandTypeArg.getValue() == "listc") {
+            ListClassifiers();
+        } else if (commandTypeArg.getValue() == "listt") {
+            RegisterCVTesters();
+            ListTesters();
+        } else if (commandTypeArg.getValue() == "classify") {
+		    if (!classifierArg.isSet()) {
+			    throw TCLAP::ArgException("Classifier is not specified");
+		    }
 
-        DataSet trainDataSet;
-        DataSet testDataSet;
-		sh_ptr<IDataSet> learningTrainData;
-        sh_ptr<IDataSet> testingTrainData;
-		sh_ptr<IDataSet> testData;
-		if (fullDataArg.isSet()) {
-            if (testDataArg.isSet() || trainDataArg.isSet()) {
-                throw TCLAP::ArgException("Too many datasets specified");
-            } 
-			if (!testIndexesArg.isSet() || !trainIndexesArg.isSet()) {
-				throw TCLAP::ArgException("Dataset indices not specified");
-			}
-			LoadDataSet(&trainDataSet, fullDataArg.getValue());
-            vector<int> indexes;
-            ReadIndexes(trainIndexesArg.getValue(), &indexes);
-            learningTrainData = GetDataSet(trainDataSet, indexes);
-            testingTrainData = GetDataSet(trainDataSet, indexes);
-            ReadIndexes(testIndexesArg.getValue(), &indexes);
-            testData = GetDataSet(trainDataSet, indexes);
-		} else {
-			if (!testDataArg.isSet() || !trainDataArg.isSet()) {
-				throw TCLAP::ArgException("Dataset is not specified");
-			}
-            LoadDataSet(&trainDataSet, trainDataArg.getValue());
-            LoadDataSet(&testDataSet, testDataArg.getValue());
-            if (trainIndexesArg.isSet()) {
+            DataSet trainDataSet;
+            DataSet testDataSet;
+		    sh_ptr<IDataSet> learningTrainData;
+            sh_ptr<IDataSet> testingTrainData;
+		    sh_ptr<IDataSet> testData;
+		    if (fullDataArg.isSet()) {
+                if (testDataArg.isSet() || trainDataArg.isSet()) {
+                    throw TCLAP::ArgException("Too many datasets specified");
+                } 
+			    if (!testIndexesArg.isSet() || !trainIndexesArg.isSet()) {
+				    throw TCLAP::ArgException("Dataset indices not specified");
+			    }
+			    LoadDataSet(&trainDataSet, fullDataArg.getValue());
                 vector<int> indexes;
                 ReadIndexes(trainIndexesArg.getValue(), &indexes);
                 learningTrainData = GetDataSet(trainDataSet, indexes);
                 testingTrainData = GetDataSet(trainDataSet, indexes);
-            } else {
-                learningTrainData.set(new DataSetWrapper(&trainDataSet));
-                testingTrainData.set(new DataSetWrapper(&trainDataSet));
-            }
-			if (testIndexesArg.isSet()) {
-                vector<int> indexes;
                 ReadIndexes(testIndexesArg.getValue(), &indexes);
-                testData = GetDataSet(testDataSet, indexes);
-            } else {
-                testData.set(new DataSetWrapper(&testDataSet));
+                testData = GetDataSet(trainDataSet, indexes);
+		    } else {
+			    if (!testDataArg.isSet() || !trainDataArg.isSet()) {
+				    throw TCLAP::ArgException("Dataset is not specified");
+			    }
+                LoadDataSet(&trainDataSet, trainDataArg.getValue());
+                LoadDataSet(&testDataSet, testDataArg.getValue());
+                if (trainIndexesArg.isSet()) {
+                    vector<int> indexes;
+                    ReadIndexes(trainIndexesArg.getValue(), &indexes);
+                    learningTrainData = GetDataSet(trainDataSet, indexes);
+                    testingTrainData = GetDataSet(trainDataSet, indexes);
+                } else {
+                    learningTrainData.set(new DataSetWrapper(&trainDataSet));
+                    testingTrainData.set(new DataSetWrapper(&trainDataSet));
+                }
+			    if (testIndexesArg.isSet()) {
+                    vector<int> indexes;
+                    ReadIndexes(testIndexesArg.getValue(), &indexes);
+                    testData = GetDataSet(testDataSet, indexes);
+                } else {
+                    testData.set(new DataSetWrapper(&testDataSet));
+                }
+    			
+		    }
+
+		    sh_ptr<IClassifier> classifier = CreateClassifier(classifierArg.getValue());
+
+            if (classifierParametersArg.isSet()) {
+                LoadParameters(classifier, classifierParametersArg.getValue());
             }
-			
-		}
 
-		sh_ptr<IClassifier> classifier = CreateClassifier(classifierArg.getValue());
+            if (penaltiesArg.isSet()) {
+			    LoadPenalties(&trainDataSet, penaltiesArg.getValue());
+			    LoadPenalties(&testDataSet, penaltiesArg.getValue());
+		    }
 
-        if (classifierParametersArg.isSet()) {
-            LoadParameters(classifier, classifierParametersArg.getValue());
+		    classifier->Learn(learningTrainData.get());
+
+		    if (trainTargetOutputArg.isSet() || 
+			    trainConfidencesOutputArg.isSet() ||
+			    trainObjectsWeightsOutputArg.isSet()) {
+			    classifier->Classify(testingTrainData.get());
+			    if (trainTargetOutputArg.isSet()) {
+				    OutputTargets(trainTargetOutputArg.getValue(), *(testingTrainData.get()));
+			    }
+			    if (trainConfidencesOutputArg.isSet()) {
+				    OutputConfidences(trainConfidencesOutputArg.getValue(), *(testingTrainData.get()));
+			    }
+			    if (trainObjectsWeightsOutputArg.isSet()) {
+				    OutputWeights(trainObjectsWeightsOutputArg.getValue(), *(testingTrainData.get()));
+			    }
+		    }
+
+		    classifier->Classify(testData.get());
+		    if (testTargetOutputArg.isSet()) {
+			    OutputTargets(testTargetOutputArg.getValue(), *(testData.get()));
+		    }
+		    if (testConfidencesOutputArg.isSet()) {
+			    OutputConfidences(testConfidencesOutputArg.getValue(), *(testData.get()));
+		    }
+		    if (testObjectsWeightsOutputArg.isSet()) {
+			    OutputWeights(testObjectsWeightsOutputArg.getValue(), *(testData.get()));
+		    }
+        } else if (commandTypeArg.getValue() == "test") {
+            throw std::logic_error("Not implemented yet");
         }
-
-        if (penaltiesArg.isSet()) {
-			LoadPenalties(&trainDataSet, penaltiesArg.getValue());
-			LoadPenalties(&testDataSet, penaltiesArg.getValue());
-		}
-
-		classifier->Learn(learningTrainData.get());
-
-		if (trainTargetOutputArg.isSet() || 
-			trainConfidencesOutputArg.isSet() ||
-			trainObjectsWeightsOutputArg.isSet()) {
-			classifier->Classify(testingTrainData.get());
-			if (trainTargetOutputArg.isSet()) {
-				OutputTargets(trainTargetOutputArg.getValue(), *(testingTrainData.get()));
-			}
-			if (trainConfidencesOutputArg.isSet()) {
-				OutputConfidences(trainConfidencesOutputArg.getValue(), *(testingTrainData.get()));
-			}
-			if (trainObjectsWeightsOutputArg.isSet()) {
-				OutputWeights(trainObjectsWeightsOutputArg.getValue(), *(testingTrainData.get()));
-			}
-		}
-
-		classifier->Classify(testData.get());
-		if (testTargetOutputArg.isSet()) {
-			OutputTargets(testTargetOutputArg.getValue(), *(testData.get()));
-		}
-		if (testConfidencesOutputArg.isSet()) {
-			OutputConfidences(testConfidencesOutputArg.getValue(), *(testData.get()));
-		}
-		if (testObjectsWeightsOutputArg.isSet()) {
-			OutputWeights(testObjectsWeightsOutputArg.getValue(), *(testData.get()));
-		}
     } catch (TCLAP::ArgException &e) { 
         cerr << "Usage error: " << e.error();
         if (e.argId()[0] != ' ') {
