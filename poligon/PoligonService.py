@@ -18,7 +18,6 @@ logger = logging
 
 def get_task(algsynonim, password):
   """Requests poligon task"""
-  logger.info('Requesting task for \'{0}\'...'.format(algsynonim))
   task_request = GetTaskSoapIn()
   task_request.Password = password
   task_request.AlgSynonim = algsynonim
@@ -37,7 +36,6 @@ def get_task(algsynonim, password):
   
 def get_problem(probsynonim, algsynonim, password):
   """Requests poligon for a given problem"""
-  logger.info('Requesting problem \'{0}\'...'.format(probsynonim))
   problem_request = GetProblemSoapIn()
   problem_request.Password = password
   problem_request.AlgSynonim = algsynonim
@@ -137,10 +135,11 @@ def register_results(algsynonim, password, pocketid, results):
   try:
     response = service.RegisterResult(register_request, **KW)
     if response.RegisterResultResult.Status == 'Ok':
-      logger.info('Results are posted successfully')
+      #logger.info('Results are posted successfully')
+      pass
     else:  
       logger.error(
-        '{0} occured while posting results'.format(
+        '{0} occurried while posting results'.format(
         response.RegisterResultResult.Status))
       logger.error(
         response.RegisterResultResult.Message)
@@ -154,6 +153,3 @@ def register_results(algsynonim, password, pocketid, results):
   (options, args) = parser.parse_args()
 
   print(options) 
-
-
-
