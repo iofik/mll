@@ -129,7 +129,7 @@ def _load_matrix(name, type=str):
     lines = text.split('\n')
     for line in lines:
       if not line: break
-      items = line.split(' ')
+      items = line.split()
       if not items: break
       vector = []
       for item in items:
