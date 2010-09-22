@@ -259,8 +259,8 @@ def Execute(command, timeout):
       process.kill()
       logger.warn("Process timed out")
       return False
-    time.sleep(10)
-    timeout[0] -= 10
+    time.sleep(0.01)
+    timeout[0] -= 0.01 / 60
     process.poll()
   logger.debug("Command completed")
   if process.returncode == 0:

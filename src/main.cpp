@@ -59,7 +59,6 @@ void LoadDataSet(DataSet* dataSet, const string& dataFileName) {
          << dataSet->GetFeatureCount() << " features, "
          << dataSet->GetObjectCount() << " objects, "
          << dataSet->GetClassCount() << " classes." << endl;
-    cout << endl;
 }
 
 sh_ptr<IClassifier> CreateClassifier(const string& classifierName) {
@@ -164,7 +163,7 @@ void LoadParameters(sh_ptr<IClassifier> classifier, const string& filename) {
         string paramaterName = line.substr(0, index);
         string parameterValue = line.substr(index + 1);
         if (!classifier->SetParameter(paramaterName, parameterValue)) {
-            cerr << "Parameter " << paramaterName
+            cerr << "Warning: Parameter " << paramaterName
                  << " could not be set to " << parameterValue << endl;
         }
     }
@@ -226,6 +225,7 @@ int main(int argc, char** argv) {
 
 		cmd.parse(argc, argv);
 
+        cout << "\t*\t*\t*\tWelcome to MLL!\t*\t*\t*" << endl;
         if (commandTypeArg.getValue() == "listc") {
             ListClassifiers();
         } else if (commandTypeArg.getValue() == "listt") {
@@ -291,11 +291,13 @@ int main(int argc, char** argv) {
 			    LoadPenalties(&testDataSet, penaltiesArg.getValue());
 		    }
 
+            cout << "Training classifier..." << endl;
 		    classifier->Learn(learningTrainData.get());
 
 		    if (trainTargetOutputArg.isSet() || 
 			    trainConfidencesOutputArg.isSet() ||
 			    trainObjectsWeightsOutputArg.isSet()) {
+                cout << "Classifying train dataset..." << endl;
 			    classifier->Classify(testingTrainData.get());
 			    if (trainTargetOutputArg.isSet()) {
 				    OutputTargets(trainTargetOutputArg.getValue(), *(testingTrainData.get()));
@@ -308,6 +310,7 @@ int main(int argc, char** argv) {
 			    }
 		    }
 
+            cout << "Classifying test dataset..." << endl;
 		    classifier->Classify(testData.get());
 		    if (testTargetOutputArg.isSet()) {
 			    OutputTargets(testTargetOutputArg.getValue(), *(testData.get()));
@@ -321,15 +324,18 @@ int main(int argc, char** argv) {
         } else if (commandTypeArg.getValue() == "test") {
             throw std::logic_error("Not implemented yet");
         }
+
+        cout << "Goodbye!" << endl;
     } catch (TCLAP::ArgException &e) { 
         cerr << "Usage error: " << e.error();
         if (e.argId()[0] != ' ') {
             cerr << " (argument: " << e.argId() << ")";
         }
         cerr << endl;
+        exit(EXIT_FAILURE);
     } catch (const std::exception& ex) {
 		cerr << "Exception occurred: " << ex.what() << endl;
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     } catch (...) {
 		cerr << "Unhandled error occurred" << endl;
 		exit(EXIT_FAILURE);
