@@ -24,7 +24,7 @@ LEARN_PROPERTIES_WEIGHTS_FILE = "learn_properties_weights.txt"
 
 TEST_TARGETS_FILE = "test_targets.txt"
 TEST_PROBABILITY_MATRIX_FILE = "test_probabilities.txt"
-TEST_OBJECTS_WEIGHTS_FILE = "test__objects_weights.txt"
+TEST_OBJECTS_WEIGHTS_FILE = "test_objects_weights.txt"
 TEST_PROPERTIES_WEIGHTS_FILE = "test_properties_weights.txt"
 
 def _save_as_arff(problem, synonim, path):

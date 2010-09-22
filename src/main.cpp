@@ -152,6 +152,9 @@ void LoadPenalties(DataSet* dataSet, const string& filename) {
 
 void LoadParameters(sh_ptr<IClassifier> classifier, const string& filename) {
     ifstream input(filename.c_str());
+    if (!input.is_open()) {
+        return;
+    }
     string line;
     while (input >> line) {
         int index = line.find('=');
@@ -171,6 +174,7 @@ int main(int argc, char** argv) {
     try {
 		typedef TCLAP::ValueArg<string> StringArg;
         TCLAP::CmdLine cmd("Command description message", ' ', "0.1");
+        cmd.~CmdLine
 
 		TCLAP::UnlabeledValueArg<string> commandTypeArg(
 			"command", "Type of command", true, "", "string", cmd);
@@ -304,7 +308,11 @@ int main(int argc, char** argv) {
 			OutputWeights(testObjectsWeightsOutputArg.getValue(), *(testData.get()));
 		}
     } catch (TCLAP::ArgException &e) { 
-        cerr << "Error: " << e.error() << " for arg " << e.argId() << endl; 
+        cerr << "Usage error: " << e.error();
+        if (e.argId()[0] != ' ') {
+            cerr << " (argument: " << e.argId() << ")";
+        }
+        cerr << endl;
     } catch (const std::exception& ex) {
 		cerr << "Exception occurred: " << ex.what() << endl;
         return EXIT_FAILURE;

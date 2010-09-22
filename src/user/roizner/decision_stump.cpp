@@ -3,9 +3,6 @@
 #include <limits>
 #include <vector>
 
-#define ALGSYNONIM ""
-#define PASSWORD ""
-
 using std::vector;
 
 REGISTER_CLASSIFIER(mll::roizner::DecisionStump,
