@@ -307,7 +307,14 @@ def Clean(prefix):
   DeleteFile(prefix + TEST_PROPERTIES_WEIGHTS_FILE)
   
 def ProcessTask(task, options, commands):
-  problem = GetProblem(task.ProblemSynonim, options)
+  try:
+    problem = GetProblem(task.ProblemSynonim, options)
+  except Exception as ex:
+    logger.error(ex)
+    result = Result()
+    result.Error = True
+    result.Exception = str(ex)
+    return [result] * len(task.LearnIndexes.ArrayOfInt)
   results = []
   for i in xrange(len(task.LearnIndexes.ArrayOfInt)):
     logger.debug("Starting " + str(task.PocketId) + ":" + str(i))

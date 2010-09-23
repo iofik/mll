@@ -47,7 +47,7 @@ def get_problem(probsynonim, algsynonim, password):
       return None
   except:
     logger.error(
-      'Error occured while requesting problem \'{0}\'\n{1}'.format(probsynonim, sys.exc_info()[0]))
+      'Error occured while requesting problem \'{0}\'\n{1}'.format(probsynonim, sys.exc_info()[1]))
     return None
     
   return response.GetProblemResult
