@@ -342,7 +342,7 @@ def Run(options):
   while True:
   
     while True:
-      logger.debug("Requsting task...")
+      logger.debug("Requesting task...")
       task = poligon.get_task(options.algsynonim, options.algpassword)
       if task:
         logger.info("Got task for " + task.AlgSynonim + ". Problem: " + task.ProblemSynonim +

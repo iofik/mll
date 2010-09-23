@@ -146,10 +146,6 @@ def register_results(algsynonim, password, pocketid, results):
     return response.RegisterResultResult 
   except:
     logger.error(
-      'Error occured while posting results \'{0}\':{1}'.format(pocketid, sys.exc_info()[1]))
+      'Error occurried while posting results \'{0}\':{1}'.format(pocketid, sys.exc_info()[1]))
     
   return None
-
-  (options, args) = parser.parse_args()
-
-  print(options) 
