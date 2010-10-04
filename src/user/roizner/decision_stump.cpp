@@ -16,23 +16,32 @@ namespace roizner {
 //! Returns the overall penalty for the selected class label
 double SelectClassLabel(const vector<double>& classWeightSums,
                         const IMetaData& metaData,
-                        int* classLabel) {
+                        int* classLabel,
+                        vector<double>* confidences) {
     double minPenalty = std::numeric_limits<double>::max();
-    for (int label = 0; label < metaData.GetClassCount(); ++label) {
+    double weightSum = 0;
+    int classCount = metaData.GetClassCount();
+    confidences->resize(classCount);
+    for (int label = 0; label < classCount; ++label) {
+        weightSum += classWeightSums[label];
+    }
+    for (int label = 0; label < classCount; ++label) {
         double penalty = 0;
-        for (int label1 = 0; label1 < metaData.GetClassCount(); ++label1) {
+        for (int label1 = 0; label1 < classCount; ++label1) {
             penalty += classWeightSums[label1] * metaData.GetPenalty(label1, label);
         }
         if (penalty < minPenalty) {
             minPenalty = penalty;
             *classLabel = label;
         }
+        confidences->at(label) = classWeightSums[label] / weightSum;
     }
     return minPenalty;
 }
 
 void DecisionStump::Learn(IDataSet* data) {
     double minPenalty = std::numeric_limits<double>::max();
+    vector<double> belowThresholdConfidences, aboveThresholdConfidences;
     // Iterating by the feature
     for (int featureIndex = 0; featureIndex < data->GetFeatureCount(); ++featureIndex) {
         vector<double> belowThresholdWeightSums(data->GetClassCount());
@@ -49,13 +58,27 @@ void DecisionStump::Learn(IDataSet* data) {
             aboveThresholdWeightSums[data->GetTarget(objectIndex)] -= data->GetWeight(objectIndex);
             int belowThresholdClass, aboveThresholdClass;
             double penalty =
-                SelectClassLabel(belowThresholdWeightSums, data->GetMetaData(), &belowThresholdClass) +
-                SelectClassLabel(aboveThresholdWeightSums, data->GetMetaData(), &aboveThresholdClass);
+                SelectClassLabel(
+                    belowThresholdWeightSums,
+                    data->GetMetaData(),
+                    &belowThresholdClass,
+                    &belowThresholdConfidences) +
+                SelectClassLabel(
+                    aboveThresholdWeightSums,
+                    data->GetMetaData(),
+                    &aboveThresholdClass,
+                    &aboveThresholdConfidences);
             if (penalty < minPenalty) {
                 minPenalty = penalty;
                 separatingFeatureIndex_ = featureIndex;
                 belowThresholdClass_ = belowThresholdClass;
                 aboveThresholdClass_ = aboveThresholdClass;
+                belowThresholdConfidences_.assign(
+                    belowThresholdConfidences.begin(),
+                    belowThresholdConfidences.end());
+                aboveThresholdConfidences_.assign(
+                    aboveThresholdConfidences.begin(),
+                    aboveThresholdConfidences.end());
                 double feature = data->GetFeature(objectIndex, featureIndex);
                 threshold_ = 
                     objectIndex + 1 < data->GetObjectCount()
@@ -70,6 +93,12 @@ void DecisionStump::Classify(IDataSet* data) const {
     for (int i = 0; i < data->GetObjectCount(); ++i) {
         bool below = data->GetFeature(i, separatingFeatureIndex_) < threshold_;
         data->SetTarget(i, below ? belowThresholdClass_ : aboveThresholdClass_);
+        for (int label = 0; label < data->GetClassCount(); ++label) {
+            data->SetConfidence(
+                i, label,
+                below ? belowThresholdConfidences_.at(label)
+                      : aboveThresholdConfidences_.at(label));
+        }
     }
 }
 

@@ -21,6 +21,8 @@ private:
     double threshold_;              //!< The feature value threshold
     int belowThresholdClass_;       //!< Class label for object below threshold
     int aboveThresholdClass_;       //!< Class label for object above threshold
+    std::vector<double> belowThresholdConfidences_; //!< Vector of confidences below threshold
+    std::vector<double> aboveThresholdConfidences_; //!< Vector of confidences above threshold
 };
 
 } // namespace roizner
