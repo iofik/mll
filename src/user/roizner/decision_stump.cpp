@@ -56,6 +56,14 @@ void DecisionStump::Learn(IDataSet* data) {
         for (int objectIndex = 0; objectIndex < data->GetObjectCount(); ++objectIndex) {
             belowThresholdWeightSums[data->GetTarget(objectIndex)] += data->GetWeight(objectIndex);
             aboveThresholdWeightSums[data->GetTarget(objectIndex)] -= data->GetWeight(objectIndex);
+            
+            if (objectIndex + 1 < data->GetObjectCount() &&
+                data->GetFeature(objectIndex, featureIndex) == 
+                data->GetFeature(objectIndex + 1, featureIndex))
+            {
+                continue;
+            }
+
             int belowThresholdClass, aboveThresholdClass;
             double penalty =
                 SelectClassLabel(
