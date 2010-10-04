@@ -64,9 +64,9 @@ void DataSetWrapper::CreateWeights() {
 void DataSetWrapper::CreateConfidences() {
     if (confidences_.get() == NULL) {
         confidences_.reset(new vector< vector<double> >(dataSet_->GetObjectCount()));
-        for (int i = 0; i < static_cast<int>(features_->size()); ++i) {
+        for (int i = 0; i < static_cast<int>(confidences_->size()); ++i) {
             confidences_->at(i).resize(dataSet_->GetClassCount());
-            for (int j = 0; j < static_cast<int>(features_->at(i).size()); ++j) {
+            for (int j = 0; j < static_cast<int>(confidences_->at(i).size()); ++j) {
                 confidences_->at(i).at(j) = dataSet_->GetConfidence(i, j);
             }
         }
