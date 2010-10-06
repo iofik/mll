@@ -74,10 +74,6 @@ sh_ptr<ITester> CreateTester(const string& testerName) {
     if (tester.get() == NULL) {
         throw std::logic_error("No tester with this name registered");
     }
-    cout << "Tester: " << testerName << endl;
-    cout << "Parameters:" << endl;
-    tester->PrintParameters(true, true);
-    cout << endl;
     return tester;
 }
 
@@ -149,7 +145,7 @@ void LoadPenalties(DataSet* dataSet, const string& filename) {
     }
 }
 
-void LoadParameters(sh_ptr<IClassifier> classifier, const string& filename) {
+void LoadParameters(IConfigurable* configurable, const string& filename) {
     ifstream input(filename.c_str());
     if (!input.is_open()) {
         return;
@@ -162,7 +158,7 @@ void LoadParameters(sh_ptr<IClassifier> classifier, const string& filename) {
         }
         string paramaterName = line.substr(0, index);
         string parameterValue = line.substr(index + 1);
-        if (!classifier->SetParameter(paramaterName, parameterValue)) {
+        if (!configurable->SetParameter(paramaterName, parameterValue)) {
             cerr << "Warning: Parameter " << paramaterName
                  << " could not be set to " << parameterValue << endl;
         }
@@ -183,7 +179,9 @@ int main(int argc, char** argv) {
         TCLAP::UnlabeledValueArg<string> commandTypeArg(
             "command", "Command", true, "", &constraint, cmd);
 		StringArg classifierArg(
-			"c", "classifier", "Name of classifier", false, "", "string", cmd);
+			"c", "classifier", "Classifier name", false, "", "string", cmd);
+        StringArg testerArg(
+            "t", "tester", "Tester name", false, "", "string", cmd);
 		StringArg fullDataArg(
 			"", "data", "File with full data", false, "", "string", cmd);
 		StringArg trainDataArg(
@@ -198,6 +196,8 @@ int main(int argc, char** argv) {
 			"", "penalties", "File with penalties", false, "", "string", cmd);
         StringArg classifierParametersArg(
             "", "parameters", "File with algorithm parameters", false, "", "string", cmd);
+        StringArg testerParametersArg(
+            "", "testerParameters", "File with tester parameters", false, "", "string", cmd);
 		
 		StringArg testTargetOutputArg(
 			"", "testTargetOutput", "File to write targets of test set", 
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
             ListTesters();
         } else if (commandTypeArg.getValue() == "classify") {
 		    if (!classifierArg.isSet()) {
-			    throw TCLAP::ArgException("Classifier is not specified");
+			    throw TCLAP::ArgException("Classifier is not specified", "classifier");
 		    }
 
             DataSet trainDataSet;
@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
 		    sh_ptr<IClassifier> classifier = CreateClassifier(classifierArg.getValue());
 
             if (classifierParametersArg.isSet()) {
-                LoadParameters(classifier, classifierParametersArg.getValue());
+                LoadParameters(classifier.get(), classifierParametersArg.getValue());
             }
 
             if (penaltiesArg.isSet()) {
@@ -322,7 +322,34 @@ int main(int argc, char** argv) {
 			    OutputWeights(testObjectsWeightsOutputArg.getValue(), *(testData.get()));
 		    }
         } else if (commandTypeArg.getValue() == "test") {
-            throw std::logic_error("Not implemented yet");
+            if (!classifierArg.isSet()) {
+			    throw TCLAP::ArgException("Classifier is not specified", "classifier");
+		    }
+            if (!testerArg.isSet()) {
+			    throw TCLAP::ArgException("Tester is not specified", "tester");
+		    }
+            if (!fullDataArg.isSet()) {
+                throw TCLAP::ArgException("Data is not specified", "data");
+            }
+            DataSet dataSet;
+            LoadDataSet(&dataSet, fullDataArg.getValue());
+            if (penaltiesArg.isSet()) {
+			    LoadPenalties(&dataSet, penaltiesArg.getValue());
+		    }
+
+		    sh_ptr<IClassifier> classifier = CreateClassifier(classifierArg.getValue());
+            if (classifierParametersArg.isSet()) {
+                LoadParameters(classifier.get(), classifierParametersArg.getValue());
+            }
+            sh_ptr<ITester> tester = CreateTester(testerArg.getValue());
+            if (classifierParametersArg.isSet()) {
+                LoadParameters(tester.get(), testerParametersArg.getValue());
+            }
+
+            cout << "Testing classifier..." << endl;
+            double loss = tester->Test(*classifier, &dataSet);
+
+            cout << "Classification loss: " << loss << endl;
         }
 
         cout << "Goodbye!" << endl;
