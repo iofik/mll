@@ -252,7 +252,7 @@ def Substitute(command, prefix, dataFile):
   
 def Execute(command, timeout):
   logger.debug("Executing command: " + command)
-  process = subprocess.Popen(command)
+  process = subprocess.Popen(command, shell=True)
   process.poll()
   while process.returncode == None:
     if timeout[0] < 0:
