@@ -191,7 +191,7 @@ bool DataSet::LoadArff(std::istream& input) {
         Tokenizer tokenizer(line);
         tokenizer.GetQuotes().push_back('"');
         tokenizer.GetDelimeters().push_back(',');
-        if (line[tokenizer.GetPosition()] == '%') {
+        if (tokenizer.GetPosition() == line.length() || line[tokenizer.GetPosition()] == '%') {
             continue;
         }
         if (!tokenizer.ReadNext()) {
