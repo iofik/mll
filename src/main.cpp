@@ -186,9 +186,9 @@ int main(int argc, char** argv) {
 			"c", "classifier", "Name of classifier", false, "", "string", cmd);
 		StringArg fullDataArg(
 			"", "data", "File with full data", false, "", "string", cmd);
-		StringArg testDataArg(
-			"", "trainData", "File with train data", false, "", "string", cmd);
 		StringArg trainDataArg(
+			"", "trainData", "File with train data", false, "", "string", cmd);
+		StringArg testDataArg(
 			"", "testData", "File with test data", false, "", "string", cmd);
 		StringArg testIndexesArg(
 			"", "testIndexes", "File with test indexes", false, "", "string", cmd);
@@ -210,13 +210,13 @@ int main(int argc, char** argv) {
 			false, "", "string", cmd);
 
 		StringArg trainTargetOutputArg(
-			"", "trainTargetOutput", "File to write target of test set", 
+			"", "trainTargetOutput", "File to write target of train set", 
 			false, "", "string", cmd);
 		StringArg trainConfidencesOutputArg(
-			"", "trainConfidencesOutput", "File to write confidences of test set", 
+			"", "trainConfidencesOutput", "File to write confidences of train set", 
 			false, "", "string", cmd);
 		StringArg trainObjectsWeightsOutputArg(
-			"", "trainObjectWeightsOutput", "File to write objects weights of test set", 
+			"", "trainObjectWeightsOutput", "File to write objects weights of train set", 
 			false, "", "string", cmd);
 
 		StringArg featureWeightsOutputArg(
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
 
 		cmd.parse(argc, argv);
 
-        cout << "\t*\t*\t*\tWelcome to MLL!\t*\t*\t*" << endl;
+        cout << "\t*\t*\t*\tWelcome to MLL!\t\t*\t*\t*" << endl;
         if (commandTypeArg.getValue() == "listc") {
             ListClassifiers();
         } else if (commandTypeArg.getValue() == "listt") {
@@ -339,5 +339,5 @@ int main(int argc, char** argv) {
     } catch (...) {
 		cerr << "Unhandled error occurred" << endl;
 		exit(EXIT_FAILURE);
-	}
+  } 
 }
