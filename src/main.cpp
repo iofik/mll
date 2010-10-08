@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
 			    trainObjectsWeightsOutputArg.isSet()) {
                 ClearTargets(testingTrainData.get());
                 cout << "Classifying train dataset..." << endl;
-			    classifier->Classify(testingTrainData.get());
+                classifier->Classify(testingTrainData.get());
 			    if (trainTargetOutputArg.isSet()) {
 				    OutputTargets(trainTargetOutputArg.getValue(), *(testingTrainData.get()));
 			    }
