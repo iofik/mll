@@ -165,6 +165,12 @@ void LoadParameters(IConfigurable* configurable, const string& filename) {
     }
 }
 
+void ClearTargets(IDataSet* dataSet) {
+    for (int i = 0; i < dataSet->GetObjectCount(); ++i) {
+        dataSet->SetTarget(i, Refuse);
+    }
+}
+
 int main(int argc, char** argv) {
     try {
 		typedef TCLAP::ValueArg<string> StringArg;
@@ -298,6 +304,7 @@ int main(int argc, char** argv) {
 			    trainConfidencesOutputArg.isSet() ||
 			    trainObjectsWeightsOutputArg.isSet()) {
                 cout << "Classifying train dataset..." << endl;
+                ClearTargets(testingTrainData.get());
 			    classifier->Classify(testingTrainData.get());
 			    if (trainTargetOutputArg.isSet()) {
 				    OutputTargets(trainTargetOutputArg.getValue(), *(testingTrainData.get()));
@@ -310,7 +317,8 @@ int main(int argc, char** argv) {
 			    }
 		    }
 
-            cout << "Classifying test dataset..." << endl;
+            ClearTargets(testData.get());
+			cout << "Classifying test dataset..." << endl;
 		    classifier->Classify(testData.get());
 		    if (testTargetOutputArg.isSet()) {
 			    OutputTargets(testTargetOutputArg.getValue(), *(testData.get()));
