@@ -41,10 +41,7 @@ inline double IDataSet::GetWeightSum() const {
 }
 
 inline void IDataSet::NormalizeWeights() {
-    double weightSum = 0;
-    for (int i = 0; i < GetObjectCount(); ++i) {
-        weightSum += GetWeight(i);
-    }
+    double weightSum = GetWeightSum();
     if (weightSum == 0) {
         return;
     }
